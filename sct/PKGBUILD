@@ -25,6 +25,7 @@ build() {
 
 package() {
     cd "$srcdir/$pkgname-$pkgver"
-    # Set BINDIR and MANDIR explicitly
-    make PREFIX=/usr BINDIR=/usr/bin MANDIR=/usr/share/man DESTDIR="$pkgdir" install
+    mkdir -p "$pkgdir/usr/bin"
+    mkdir -p "$pkgdir/usr/share/man/man1"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
 }
