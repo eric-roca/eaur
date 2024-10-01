@@ -1,4 +1,3 @@
-# Maintainer: Your Name <your.email@example.com>
 pkgname=sct
 pkgver=0.5
 pkgrel=1
@@ -7,15 +6,35 @@ arch=('x86_64')
 url="https://umaxx.net"
 license=('public-domain')
 depends=('libx11' 'libxrandr')
-makedepends=('make')
 source=("https://umaxx.net/dl/$pkgname-$pkgver.tar.gz")
 sha256sums=('15380c3775e38e0a46a57343c29cacff06dde2f340c2cc09e08bb118cee93053')
 
 prepare() {
     cd "$srcdir/$pkgname-$pkgver"
-    # Patch Makefile to use DESTDIR
-    sed -i 's|$(BINDIR)|$(DESTDIR)$(BINDIR)|g' Makefile
-    sed -i 's|$(MANDIR)|$(DESTDIR)$(MANDIR)|g' Makefile
+    rm Makefile
+    # Create the Makefile dynamically using a here-document
+    cat > Makefile << 'EOF'
+CC=gcc
+CFLAGS=-O2
+PREFIX=/usr
+BINDIR=\$(PREFIX)/bin
+MANDIR=\$(PREFIX)/share/man
+
+all: sct
+
+sct: sct.o
+	\$(CC) \$(CFLAGS) -o sct sct.o
+
+sct.o: sct.c
+	\$(CC) \$(CFLAGS) -c sct.c
+
+install: sct
+	install -Dm755 sct \$(DESTDIR)\$(BINDIR)/sct
+	install -Dm644 sct.1 \$(DESTDIR)\$(MANDIR)/man1/sct.1
+
+clean:
+	rm -f sct.o sct
+EOF
 }
 
 build() {
@@ -25,7 +44,6 @@ build() {
 
 package() {
     cd "$srcdir/$pkgname-$pkgver"
-    mkdir -p "$pkgdir/usr/bin"
-    mkdir -p "$pkgdir/usr/share/man/man1"
-    make PREFIX=/usr DESTDIR="$pkgdir" install
+    # Pass PREFIX during installation
+    make DESTDIR="$pkgdir" PREFIX=/usr install
 }
