@@ -1,0 +1,66 @@
+From a4bfadf624b34356d36bd890f69e89f7c2052269 Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Sun, 29 Sep 2024 20:03:00 +0200
+Subject: [PATCH] Cleans up ifdefs
+
+---
+ dmenu.c | 11 -----------
+ 1 file changed, 11 deletions(-)
+
+diff --git a/dmenu.c b/dmenu.c
+index 23cb29f..f631931 100644
+--- a/dmenu.c
++++ b/dmenu.c
+@@ -11,9 +11,7 @@
+ #include <X11/Xlib.h>
+ #include <X11/Xatom.h>
+ #include <X11/Xutil.h>
+-#ifdef XINERAMA
+ #include <X11/extensions/Xinerama.h>
+-#endif
+ #include <X11/Xft/Xft.h>
+ 
+ #include "drw.h"
+@@ -631,11 +629,9 @@ setup(void)
+ 	Window w, dw, *dws;
+ 	XWindowAttributes wa;
+ 	XClassHint ch = {"dmenu", "dmenu"};
+-#ifdef XINERAMA
+ 	XineramaScreenInfo *info;
+ 	Window pw;
+ 	int a, di, n, area = 0;
+-#endif
+ 	/* init appearance */
+ 	for (j = 0; j < SchemeLast; j++)
+ 		scheme[j] = drw_scm_create(drw, colors[j], 2);
+@@ -648,7 +644,6 @@ setup(void)
+ 	lines = MAX(lines, 0);
+ 	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
+ 	mh = (lines + 1) * bh;
+-#ifdef XINERAMA
+ 	i = 0;
+ 	if (parentwin == root && (info = XineramaQueryScreens(dpy, &n))) {
+ 		XGetInputFocus(dpy, &w, &di);
+@@ -686,7 +681,6 @@ setup(void)
+ 
+ 		XFree(info);
+ 	} else
+-#endif
+ 	{
+ 		if (!XGetWindowAttributes(dpy, parentwin, &wa))
+ 			die("could not get embedding window attributes: 0x%lx",
+@@ -807,11 +801,6 @@ main(int argc, char *argv[])
+ 	sp = sidepad;
+ 	vp = (topbar == 1) ? vertpad : - vertpad;
+ 
+-#ifdef __OpenBSD__
+-	if (pledge("stdio rpath", NULL) == -1)
+-		die("pledge");
+-#endif
+-
+ 	if (fast && !isatty(0)) {
+ 		grabkeyboard();
+ 		readstdin();
+-- 
+2.46.2
+

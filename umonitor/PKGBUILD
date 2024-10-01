@@ -1,0 +1,43 @@
+# Maintainer: Èric Roca Fernández <eric.roca@gmail.com>
+
+pkgname=umonitor
+pkgver=1.2
+pkgrel=1
+pkgdesc="Dynamic monitor configuration"
+arch=('x86_64')
+url="https://github.com/rliou92/umonitor"
+license=('MIT')
+depends=('libconfig' 'libxcb')
+makedepends=()
+source=("https://github.com/rliou92/umonitor/archive/refs/tags/v$pkgver.tar.gz"
+        0001-Add-extern.patch
+    )
+sha256sums=('3c643456d858d4cae480439d609f82201bd75b914c2c73f1be14310e3ec34960'
+    'f8e6a36a8ba61e577d2aeba917418d9ca62247004fe9d8cfcbff2473e4d2c38c' # 0001-Add-extern.patch
+)
+
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver/"
+    rm -rf "$srcdir/$pkgname-$pkgver/Arch"
+
+    mv src/* .
+    rmdir src
+    # Apply patches
+    for patch in "$srcdir"/*.patch; do
+        patch -Np1 -i $patch
+    done
+
+    # Patch the Makefile to account for directory changes
+    sed -i 's|SRCDIR = src|SRCDIR = ./|; s|CFLAGS = -Wall|CFLAGS = -Wall -fcommon|' Makefile
+
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,36 @@
+From f1f5c91346fba530ee99efb3553890d3c5c9a4aa Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Mon, 30 Sep 2024 22:43:52 +0200
+Subject: [PATCH 3/3] Adds personal configuration
+
+---
+ config.def.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/config.def.h b/config.def.h
+index 708a71f..a6663f7 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -1,6 +1,6 @@
+ /* user and group to drop privileges to */
+-static const char *user  = "nobody";
+-static const char *group = "nogroup";
++static const char *user  = "eric";
++static const char *group = "eric";
+ 
+ static const char *colorname[NUMCOLS] = {
+ 	[INIT] =   "black",     /* after initialization */
+@@ -12,8 +12,8 @@ static const char *colorname[NUMCOLS] = {
+ static const int failonclear = 1;
+ 
+ /* Background image path, should be available to the user above */
+-static const char* background_image = "";
+-static const int blur_radius = -1;
++static const char* background_image = "/home/eric/Pictures/Backgrounds/Current_Background.jpg";
++static const int blur_radius = 10;
+ 
+ /* time in seconds before the monitor shuts down */
+ static const int monitortime = 5;
+-- 
+2.46.2
+

@@ -1,0 +1,49 @@
+# Maintainer: Your Name <your.email@example.com>
+
+pkgname=dwm
+pkgver=6.5
+pkgrel=1
+pkgdesc="A dynamic window manager for X"
+arch=('x86_64')
+url="https://dwm.suckless.org"
+license=('MIT')
+depends=('libx11' 'libxinerama' 'libxft' 'freetype2')
+makedepends=('git')
+source=("https://dl.suckless.org/dwm/dwm-$pkgver.tar.gz"
+        0001-Adds-barpadding.patch
+        0002-Adds-EWMH-tags.patch
+        0003-Adds-focus-on-active.patch
+        0004-Adds-reorganize-tags.patch
+        0005-Adds-swallow.patch
+        0006-Adds-fullgaps.patch
+        0007-Fixes-compilation-errors-and-cleans-up-the-code.patch
+        0008-Personal-configuration.patch
+    )
+sha256sums=('SKIP'
+    '2d2e0d4a5465dea2b7356642d06954d5aff59c9645c23eb857c66dfce5f3230e' # 0001-Adds-barpadding.patch
+    '9abab4952cd5c0ddb104cc162c2a76fb25895ad18a3f80827618a6965e501e04' # 0002-Adds-EWMH-tags.patch
+    '650520156af145cbf6ae1d56fae367286f4806ece2776a158a01dae33dbd8979' # 0003-Adds-focus-on-active.patch
+    'a00b6c854e497c50b30c70eac0efbc4b48254d84c52f6a2a6bb39b21b6eef82b' # 0004-Adds-reorganize-tags.patch
+    'ac8e8422485d0dba98c5c76791e5ae5e7444a75be635c5043bfeb1c188349c06' # 0005-Adds-swallow.patch
+    'd877a7186146fee9a05013b5252abaf027eb7e540383516a89a44e1d200fd1fd' # 0006-Adds-fullgaps.patch
+    'a38f838fc3c8218ca9b2a88d2ac781c5318e74176a54ea108a49e68563b5f4d1' # 0007-Fixes-compilation-errors-and-cleans-up-the-code.patch
+    'c5c76ff06eb3c45874a9c6f5f26b5c0b239c054ebe01e531988c2ba8770c95b5' # 0008-Personal-configuration.patch
+)
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    # Apply patches
+    for patch in "$srcdir"/*.patch; do
+        patch -Np1 -i "$patch"
+    done
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make X11INC=/usr/include/X11 X11LIB=/usr/lib/X11
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}

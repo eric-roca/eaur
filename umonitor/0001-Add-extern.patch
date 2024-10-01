@@ -1,0 +1,39 @@
+From 86e043ee51b2d647b35af21fa6f0429674f908f0 Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Mon, 23 Sep 2024 13:13:45 +0200
+Subject: [PATCH] Global CONFIG_FILE variable defined without extern in header
+ file
+
+Since GCC 10.1.0 (2020-05-07) default compilation options to use -fno-common, which means that by default, the code above no longer links unless you override the default with -fcommon
+See https://github.com/rliou92/umonitor/pull/10/commits/d98db89470c00de2a64e851c6a7baa8aecc19d4a
+---
+ umonitor.c | 1 +
+ umonitor.h | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/umonitor.c b/umonitor.c
+index f906166..1627cb7 100644
+--- a/umonitor.c
++++ b/umonitor.c
+@@ -93,6 +93,7 @@ static const struct option long_options[] = {
+ 	{"force-load", no_argument, &force_load, 1}
+ };
+ 
++char* CONFIG_FILE;
+ 
+ void umon_print(const char *format, ...)
+ {
+diff --git a/umonitor.h b/umonitor.h
+index 64db109..f4d13a2 100644
+--- a/umonitor.h
++++ b/umonitor.h
+@@ -1,5 +1,5 @@
+ // Global variables
+-char *CONFIG_FILE;		/*!< Configuration file path name */
++extern char *CONFIG_FILE;		/*!< Configuration file path name */
+ 
+ // Some helper functions
+ void fetch_edid(xcb_randr_output_t * output_p, screen_class * screen_t_p,
+-- 
+2.46.1
+

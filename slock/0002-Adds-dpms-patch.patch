@@ -1,0 +1,86 @@
+From 9dbd460482dbbc71bb4d53237b5eb481ed52fb19 Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Mon, 30 Sep 2024 22:42:39 +0200
+Subject: [PATCH 2/3] Adds dpms patch
+
+---
+ config.def.h |  3 +++
+ slock.c      | 26 ++++++++++++++++++++++++++
+ 2 files changed, 29 insertions(+)
+
+diff --git a/config.def.h b/config.def.h
+index ec5fe79..708a71f 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -14,3 +14,6 @@ static const int failonclear = 1;
+ /* Background image path, should be available to the user above */
+ static const char* background_image = "";
+ static const int blur_radius = -1;
++
++/* time in seconds before the monitor shuts down */
++static const int monitortime = 5;
+diff --git a/slock.c b/slock.c
+index b012e29..d2946e5 100644
+--- a/slock.c
++++ b/slock.c
+@@ -1,4 +1,5 @@
+ /* See LICENSE file for license details. */
++#include <X11/Xmd.h>
+ #define _XOPEN_SOURCE 500
+ #if HAVE_SHADOW_H
+ #include <shadow.h>
+@@ -15,6 +16,7 @@
+ #include <unistd.h>
+ #include <sys/types.h>
+ #include <X11/extensions/Xrandr.h>
++#include <X11/extensions/dpms.h>
+ #include <X11/keysym.h>
+ #include <X11/Xlib.h>
+ #include <X11/Xutil.h>
+@@ -332,6 +334,8 @@ main(int argc, char **argv) {
+ 	const char *hash;
+ 	Display *dpy;
+ 	int s, nlocks, nscreens;
++	CARD16 standby, suspend, off;
++	BOOL dpms_state;
+ 
+ 	ARGBEGIN {
+ 	case 'v':
+@@ -420,6 +424,22 @@ main(int argc, char **argv) {
+ 	if (nlocks != nscreens)
+ 		return 1;
+ 
++	/* DPMS magic to disable the monitor */
++	if (!DPMSCapable(dpy))
++		die("slock: DPMSCapable failed\n");
++	if (!DPMSInfo(dpy, &standby, &dpms_state))
++		die("slock: DPMSInfo failed\n");
++	if (!DPMSEnable(dpy) && !dpms_state)
++		die("slock: DPMSEnable failed\n");
++	if (!DPMSGetTimeouts(dpy, &standby, &suspend, &off))
++		die("slock: DPMSGetTimeouts failed\n");
++	if (!standby || !suspend || !off)
++		die("slock: at least one DPMS variable is zero\n");
++	if (!DPMSSetTimeouts(dpy, monitortime, monitortime, monitortime))
++		die("slock: DPMSSetTimeouts failed\n");
++
++	XSync(dpy, 0);
++
+ 	/* run post-lock command */
+ 	if (argc > 0) {
+ 		switch (fork()) {
+@@ -437,5 +457,11 @@ main(int argc, char **argv) {
+ 	/* everything is now blank. Wait for the correct password */
+ 	readpw(dpy, &rr, locks, nscreens, hash);
+ 
++	/* reset DPMS values to inital ones */
++	DPMSSetTimeouts(dpy, standby, suspend, off);
++	if (!dpms_state)
++		DPMSDisable(dpy);
++	XSync(dpy, 0);
++
+ 	return 0;
+ }
+-- 
+2.46.2
+

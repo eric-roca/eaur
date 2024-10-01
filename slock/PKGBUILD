@@ -1,0 +1,42 @@
+# Maintainer: Èric Roca Fernández <eric.roca@gmail.com>
+
+pkgname=slock
+pkgver=1.5
+pkgrel=1
+pkgdesc="A simple screen locker for X"
+arch=('x86_64')
+url="https://tools.suckless.org/scroll"
+license=('MIT')
+depends=('libxext' 'libxrandr')
+makedepends=()
+source=("https://dl.suckless.org/tools/$pkgname-$pkgver.tar.gz"
+    0001-Adds-background-and-blur-effect.patch
+    0002-Adds-dpms-patch.patch
+    0003-Adds-personal-configuration.patch
+    )
+sha256sums=('SKIP'
+    '5d31da27293c4f9b4b44d1cef8367fee61dcd40d83be5da856fd0820e70ce200' # 0001-Adds-background-and-blur-effect.patch
+    '60ae8147f82b0be789bc851285cb26c6cd891ea8342ef40890f8dde4aeb4f66d' # 0002-Adds-dpms-patch.patch
+    '567b13465de063f8b5ff5eeaf4a8070569312fbfe91167edf859989240ee1172' # 0003-Adds-personal-configuration.patch
+)
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    # Apply patches
+    for patch in "$srcdir"/*.patch; do
+        patch -Np1 -i "$patch"
+    done
+
+    # Remove man pages
+    sed -i '/man1/d' Makefile
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}

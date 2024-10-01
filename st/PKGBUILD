@@ -1,0 +1,52 @@
+# Maintainer: Èric Roca Fernández <eric.roca@gmail.com>
+
+pkgname=st
+pkgver=0.9.2
+pkgrel=1
+pkgdesc="A simple terminal implementation for X"
+arch=('x86_64')
+url="https://st.suckless.org"
+license=('MIT')
+depends=('libx11' 'libxinerama' 'libxft' 'freetype2' 'scroll')
+makedepends=('git')
+source=("https://dl.suckless.org/$pkgname/$pkgname-$pkgver.tar.gz"
+    0001-Adds-anysize-patch.patch
+    0002-Adds-bold-is-not-bright-patch.patch
+    0003-Adds-externalpipe-patch.patch
+    0004-Adds-font2-patch.patch
+    0005-Adds-highlight-url-patch.patch
+    0006-Adds-alpha-patch.patch
+    0007-Adds-personal-configuration.patch
+    )
+sha256sums=('SKIP'
+    'e26120fa390d7c0a2bdd8c0297aa4d0323db7c14ad6e3bae0e0af88cd33707d5' # 0001-Adds-anysize-patch.patch
+    'b995081ec537be4617dd3a7285d639c6949a553a226eb4d5d9d07b85e24e04b5' # 0002-Adds-bold-is-not-bright.patch
+    'bb7b3036a1edf9bdd1d2d1accd451a98015c9d5febaec460a54ef841e124608a' # 0003-Adds-externalpipe-patch.patch
+    'd6d1bc41ecbd10ac2706a4e4053c56521db4e9e221e7991bd27a1e4b98ac6a4d' # 0004-Adds-font2-patch.patch
+    'b00d278ed073038a926163cce1cf73f85d54fddf486eb622e482ccbe34973f35' # 0005-Adds-highlight-url-patch.patch
+    '6aa892cc17fdccad46f8f6d3e658b4e1151a7883ea95ea57f557e9115377dee1' # 0006-Adds-alpha-patch.patch
+    '4032f8172a2abc992c285a81beb5906ef99e8de24ced1e6df8b6eb840341e693' # 0007-Adds-personal-configuration.patch
+)
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    # Apply patches
+    for patch in "$srcdir"/*.patch; do
+        patch -Np1 -i "$patch"
+    done
+
+    # Remove man pages
+    sed -i '/man1/d' Makefile
+    sed -i '/tic -sx/d' Makefile
+    sed -i '/Please see the/d' Makefile
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make X11INC=/usr/include/X11 X11LIB=/usr/lib/X11
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}

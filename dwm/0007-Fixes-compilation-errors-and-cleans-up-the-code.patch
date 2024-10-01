@@ -1,0 +1,283 @@
+From 741bc4fdc4606676b3f0902b578a8b4c12761794 Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Thu, 12 Sep 2024 16:36:25 +0200
+Subject: [PATCH 7/8] Fixes compilation errors and cleans up the code
+
+---
+ Makefile     | 10 +++-----
+ config.def.h |  1 -
+ dwm.c        | 67 ++--------------------------------------------------
+ dwm.c.orig   | 24 ++++++++++---------
+ 4 files changed, 18 insertions(+), 84 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index ffa69b4..bc04e75 100644
+--- a/Makefile
++++ b/Makefile
+@@ -20,12 +20,12 @@ dwm: ${OBJ}
+ 	${CC} -o $@ ${OBJ} ${LDFLAGS}
+ 
+ clean:
+-	rm -f dwm ${OBJ} dwm-${VERSION}.tar.gz
++	rm -f dwm ${OBJ} dwm-${VERSION}.tar.gz config.h
+ 
+ dist: clean
+ 	mkdir -p dwm-${VERSION}
+ 	cp -R LICENSE Makefile README config.def.h config.mk\
+-		dwm.1 drw.h util.h ${SRC} dwm.png transient.c dwm-${VERSION}
++		dwm.1 drw.h util.h ${SRC} transient.c dwm-${VERSION}
+ 	tar -cf dwm-${VERSION}.tar dwm-${VERSION}
+ 	gzip dwm-${VERSION}.tar
+ 	rm -rf dwm-${VERSION}
+@@ -34,12 +34,8 @@ install: all
+ 	mkdir -p ${DESTDIR}${PREFIX}/bin
+ 	cp -f dwm ${DESTDIR}${PREFIX}/bin
+ 	chmod 755 ${DESTDIR}${PREFIX}/bin/dwm
+-	mkdir -p ${DESTDIR}${MANPREFIX}/man1
+-	sed "s/VERSION/${VERSION}/g" < dwm.1 > ${DESTDIR}${MANPREFIX}/man1/dwm.1
+-	chmod 644 ${DESTDIR}${MANPREFIX}/man1/dwm.1
+ 
+ uninstall:
+-	rm -f ${DESTDIR}${PREFIX}/bin/dwm\
+-		${DESTDIR}${MANPREFIX}/man1/dwm.1
++	rm -f ${DESTDIR}${PREFIX}/bin/dwm
+ 
+ .PHONY: all clean dist install uninstall
+diff --git a/config.def.h b/config.def.h
+index 6b42365..e36332a 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -46,7 +46,6 @@ static const Layout layouts[] = {
+ 	/* symbol     arrange function */
+ 	{ "[]=",      tile },    /* first entry is default */
+ 	{ "><>",      NULL },    /* no layout function means floating behavior */
+-	{ "[M]",      monocle },
+ };
+ 
+ /* key definitions */
+diff --git a/dwm.c b/dwm.c
+index ac5a064..f5d38db 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -36,16 +36,10 @@
+ #include <X11/Xlib.h>
+ #include <X11/Xproto.h>
+ #include <X11/Xutil.h>
+-#ifdef XINERAMA
+ #include <X11/extensions/Xinerama.h>
+-#endif /* XINERAMA */
+ #include <X11/Xft/Xft.h>
+ #include <X11/Xlib-xcb.h>
+ #include <xcb/res.h>
+-#ifdef __OpenBSD__
+-#include <sys/sysctl.h>
+-#include <kvm.h>
+-#endif /* __OpenBSD */
+ 
+ #include "drw.h"
+ #include "util.h"
+@@ -193,7 +187,6 @@ static void killclient(const Arg *arg);
+ static void manage(Window w, XWindowAttributes *wa);
+ static void mappingnotify(XEvent *e);
+ static void maprequest(XEvent *e);
+-static void monocle(Monitor *m);
+ static void motionnotify(XEvent *e);
+ static void movemouse(const Arg *arg);
+ static Client *nexttiled(Client *c);
+@@ -1071,7 +1064,6 @@ incnmaster(const Arg *arg)
+ 	arrange(selmon);
+ }
+ 
+-#ifdef XINERAMA
+ static int
+ isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
+ {
+@@ -1081,7 +1073,6 @@ isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
+ 			return 0;
+ 	return 1;
+ }
+-#endif /* XINERAMA */
+ 
+ void
+ keypress(XEvent *e)
+@@ -1201,21 +1192,6 @@ maprequest(XEvent *e)
+ 		manage(ev->window, &wa);
+ }
+ 
+-void
+-monocle(Monitor *m)
+-{
+-	unsigned int n = 0;
+-	Client *c;
+-
+-	for (c = m->clients; c; c = c->next)
+-		if (ISVISIBLE(c))
+-			n++;
+-	if (n > 0) /* override layout symbol */
+-		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
+-	for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
+-		resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
+-}
+-
+ void
+ motionnotify(XEvent *e)
+ {
+@@ -1572,7 +1548,7 @@ void
+ setdesktopnames(void)
+ {
+ 	XTextProperty text;
+-	Xutf8TextListToTextProperty(dpy, tags, TAGSLENGTH, XUTF8StringStyle, &text);
++	Xutf8TextListToTextProperty(dpy, (char **)tags, TAGSLENGTH, XUTF8StringStyle, &text);
+ 	XSetTextProperty(dpy, root, &text, netatom[NetDesktopNames]);
+ }
+ 
+@@ -2045,7 +2021,7 @@ updatecurrentdesktop(void)
+ {
+ 	long rawdata[] = { selmon->tagset[selmon->seltags] };
+ 	int i=0;
+-	while(*rawdata >> i+1){
++	while(*rawdata >> (i+1)){
+ 		i++;
+ 	}
+ 	long data[] = { i };
+@@ -2057,7 +2033,6 @@ updategeom(void)
+ {
+ 	int dirty = 0;
+ 
+-#ifdef XINERAMA
+ 	if (XineramaIsActive(dpy)) {
+ 		int i, j, n, nn;
+ 		Client *c;
+@@ -2112,7 +2087,6 @@ updategeom(void)
+ 		}
+ 		free(unique);
+ 	} else
+-#endif /* XINERAMA */
+ 	{ /* default monitor setup */
+ 		if (!mons)
+ 			mons = createmon();
+@@ -2257,7 +2231,6 @@ winpid(Window w)
+ 
+ 	pid_t result = 0;
+ 
+-#ifdef __linux__
+ 	xcb_res_client_id_spec_t spec = {0};
+ 	spec.client = w;
+ 	spec.mask = XCB_RES_CLIENT_ID_MASK_LOCAL_CLIENT_PID;
+@@ -2284,23 +2257,6 @@ winpid(Window w)
+ 	if (result == (pid_t)-1)
+ 		result = 0;
+ 
+-#endif /* __linux__ */
+-
+-#ifdef __OpenBSD__
+-        Atom type;
+-        int format;
+-        unsigned long len, bytes;
+-        unsigned char *prop;
+-        pid_t ret;
+-
+-        if (XGetWindowProperty(dpy, w, XInternAtom(dpy, "_NET_WM_PID", 0), 0, 1, False, AnyPropertyType, &type, &format, &len, &bytes, &prop) != Success || !prop)
+-               return 0;
+-
+-        ret = *(pid_t*)prop;
+-        XFree(prop);
+-        result = ret;
+-
+-#endif /* __OpenBSD__ */
+ 	return result;
+ }
+ 
+@@ -2309,7 +2265,6 @@ getparentprocess(pid_t p)
+ {
+ 	unsigned int v = 0;
+ 
+-#ifdef __linux__
+ 	FILE *f;
+ 	char buf[256];
+ 	snprintf(buf, sizeof(buf) - 1, "/proc/%u/stat", (unsigned)p);
+@@ -2319,20 +2274,6 @@ getparentprocess(pid_t p)
+ 
+ 	fscanf(f, "%*u %*s %*c %u", &v);
+ 	fclose(f);
+-#endif /* __linux__*/
+-
+-#ifdef __OpenBSD__
+-	int n;
+-	kvm_t *kd;
+-	struct kinfo_proc *kp;
+-
+-	kd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, NULL);
+-	if (!kd)
+-		return 0;
+-
+-	kp = kvm_getprocs(kd, KERN_PROC_PID, p, sizeof(*kp), &n);
+-	v = kp->p_ppid;
+-#endif /* __OpenBSD__ */
+ 
+ 	return (pid_t)v;
+ }
+@@ -2475,10 +2416,6 @@ main(int argc, char *argv[])
+ 		die("dwm: cannot get xcb connection\n");
+ 	checkotherwm();
+ 	setup();
+-#ifdef __OpenBSD__
+-	if (pledge("stdio rpath proc exec ps", NULL) == -1)
+-		die("pledge");
+-#endif /* __OpenBSD__ */
+ 	scan();
+ 	run();
+ 	cleanup();
+diff --git a/dwm.c.orig b/dwm.c.orig
+index 02952b9..ac5a064 100644
+--- a/dwm.c.orig
++++ b/dwm.c.orig
+@@ -128,6 +128,7 @@ struct Monitor {
+ 	int by;               /* bar geometry */
+ 	int mx, my, mw, mh;   /* screen size */
+ 	int wx, wy, ww, wh;   /* window area  */
++	int gappx;            /* gaps between windows */
+ 	unsigned int seltags;
+ 	unsigned int sellt;
+ 	unsigned int tagset[2];
+@@ -724,6 +725,7 @@ createmon(void)
+ 	m->nmaster = nmaster;
+ 	m->showbar = showbar;
+ 	m->topbar = topbar;
++	m->gappx = gappx;
+ 	m->lt[0] = &layouts[0];
+ 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
+ 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
+@@ -1854,18 +1856,18 @@ tile(Monitor *m)
+ 	if (n > m->nmaster)
+ 		mw = m->nmaster ? m->ww * m->mfact : 0;
+ 	else
+-		mw = m->ww;
+-	for (i = my = ty = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+-		if (i < m->nmaster) {
+-			h = (m->wh - my) / (MIN(n, m->nmaster) - i);
+-			resize(c, m->wx, m->wy + my, mw - (2*c->bw), h - (2*c->bw), 0);
+-			if (my + HEIGHT(c) < m->wh)
+-				my += HEIGHT(c);
++		mw = m->ww - m->gappx;
++	for (i = 0, my = ty = m->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
++			if (i < m->nmaster) {
++			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gappx;
++			resize(c, m->wx + m->gappx, m->wy + my, mw - (2*c->bw) - m->gappx, h - (2*c->bw), 0);
++			if (my + HEIGHT(c) + m->gappx < m->wh)
++				my += HEIGHT(c) + m->gappx;
+ 		} else {
+-			h = (m->wh - ty) / (n - i);
+-			resize(c, m->wx + mw, m->wy + ty, m->ww - mw - (2*c->bw), h - (2*c->bw), 0);
+-			if (ty + HEIGHT(c) < m->wh)
+-				ty += HEIGHT(c);
++			h = (m->wh - ty) / (n - i) - m->gappx;
++			resize(c, m->wx + mw + m->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), 0);
++			if (ty + HEIGHT(c) + m->gappx < m->wh)
++				ty += HEIGHT(c) + m->gappx;
+ 		}
+ }
+ 
+-- 
+2.46.0
+

@@ -1,0 +1,90 @@
+From 8680a2464b1873493267e8f9208d445614aacf43 Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Sat, 14 Sep 2024 17:57:36 +0200
+Subject: [PATCH] Personal configuration
+
+---
+ config.def.h | 27 +++++++++++++++------------
+ 1 file changed, 15 insertions(+), 12 deletions(-)
+
+diff --git a/config.def.h b/config.def.h
+index e36332a..4c59b6b 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -1,7 +1,7 @@
+ /* See LICENSE file for copyright and license details. */
+ 
+ /* appearance */
+-static const unsigned int borderpx  = 1;        /* border pixel of windows */
++static const unsigned int borderpx  = 5;        /* border pixel of windows */
+ static const unsigned int gappx     = 10;       /* gaps between windows */
+ static const unsigned int snap      = 32;       /* snap pixel */
+ static const int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
+@@ -9,7 +9,7 @@ static const int showbar            = 1;        /* 0 means no bar */
+ static const int topbar             = 1;        /* 0 means bottom bar */
+ static const int vertpad            = 10;       /* vertical padding of bar */
+ static const int sidepad            = 10;       /* horizontal padding of bar */
+-static const char *fonts[]          = { "monospace:size=10" };
++static const char *fonts[]          = {"Fira Code Nerd Font:pixelsize=12:antialias=true:autohint=true"};
+ static const char dmenufont[]       = "monospace:size=10";
+ static const char col_gray1[]       = "#222222";
+ static const char col_gray2[]       = "#444444";
+@@ -31,9 +31,8 @@ static const Rule rules[] = {
+ 	 *	WM_NAME(STRING) = title
+ 	 */
+ 	/* class     instance  title           tags mask  isfloating  isterminal  noswallow  monitor */
+-	{ "Gimp",    NULL,     NULL,           0,         1,          0,           0,        -1 },
+-	{ "Firefox", NULL,     NULL,           1 << 8,    0,          0,          -1,        -1 },
+ 	{ "St",      NULL,     NULL,           0,         0,          1,           0,        -1 },
++	{ "pinentry-qt",    NULL,     NULL,           0,         1,          0,           0,        -1 },
+ };
+ 
+ /* layout(s) */
+@@ -49,7 +48,8 @@ static const Layout layouts[] = {
+ };
+ 
+ /* key definitions */
+-#define MODKEY Mod1Mask
++#define MODKEY Mod4Mask
++#define ALTKEY Mod1Mask
+ #define TAGKEYS(KEY,TAG) \
+ 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
+ 	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
+@@ -66,7 +66,7 @@ static const char *termcmd[]  = { "st", NULL };
+ 
+ static const Key keys[] = {
+ 	/* modifier                     key        function        argument */
+-	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
++	{ MODKEY,                       XK_space,  spawn,          {.v = dmenucmd } },
+ 	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
+ 	{ MODKEY,                       XK_b,      togglebar,      {0} },
+ 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
+@@ -80,16 +80,19 @@ static const Key keys[] = {
+ 	{ MODKEY,                       XK_Tab,    view,           {0} },
+ 	{ MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
+ 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
+-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+-	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
+-	{ MODKEY,                       XK_space,  setlayout,      {0} },
+-	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
+-	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
+-	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
++	{ ALTKEY,                       XK_0,      view,           {.ui = ~0 } },
++	{ ALTKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
+ 	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
+ 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
+ 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
+ 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
++	/* Own programs                                                        */
++	{ MODKEY,                       XK_minus,  spawn,          SHCMD("dwm-volume -d; pkill -RTMIN+18 dwmblocks") },
++	{ MODKEY,                       XK_equal,  spawn,          SHCMD("dwm-volume -u; pkill -RTMIN+18 dwmblocks") },
++	{ MODKEY,                       XK_0,      spawn,          SHCMD("dwm-volume -m; pkill -RTMIN+18 dwmblocks") },
++	{ MODKEY,                       XK_m,      spawn,          SHCMD("dmenu-diskutil") },
++	{ MODKEY|ShiftMask,             XK_l,      spawn,          SHCMD("slock") },
++	{ MODKEY,                       XK_s,      spawn,          SHCMD("scrot -s") },
+ 	TAGKEYS(                        XK_1,                      0)
+ 	TAGKEYS(                        XK_2,                      1)
+ 	TAGKEYS(                        XK_3,                      2)
+-- 
+2.46.0
+

@@ -1,0 +1,256 @@
+From 27286137e86a903deb40afee7d80c2a5912d2da9 Mon Sep 17 00:00:00 2001
+From: Eric Roca <eric.roca@gmail.com>
+Date: Thu, 12 Sep 2024 16:34:53 +0200
+Subject: [PATCH 2/8] Adds EWMH tags
+
+---
+ dwm.c      | 59 +++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ dwm.c.orig | 25 ++++++++++++++---------
+ 2 files changed, 73 insertions(+), 11 deletions(-)
+
+diff --git a/dwm.c b/dwm.c
+index b86f4b7..2bfdd39 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -55,6 +55,7 @@
+ #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
+ #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
+ #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
++#define TAGSLENGTH              (LENGTH(tags))
+ #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
+ 
+ /* enums */
+@@ -62,7 +63,7 @@ enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
+ enum { SchemeNorm, SchemeSel }; /* color schemes */
+ enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
+        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
+-       NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
++       NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, NetLast }; /* EWMH atoms */
+ enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
+ enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
+        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
+@@ -198,11 +199,15 @@ static void scan(void);
+ static int sendevent(Client *c, Atom proto);
+ static void sendmon(Client *c, Monitor *m);
+ static void setclientstate(Client *c, long state);
++static void setcurrentdesktop(void);
++static void setdesktopnames(void);
+ static void setfocus(Client *c);
+ static void setfullscreen(Client *c, int fullscreen);
+ static void setlayout(const Arg *arg);
+ static void setmfact(const Arg *arg);
++static void setnumdesktops(void);
+ static void setup(void);
++static void setviewport(void);
+ static void seturgent(Client *c, int urg);
+ static void showhide(Client *c);
+ static void spawn(const Arg *arg);
+@@ -216,6 +221,7 @@ static void toggleview(const Arg *arg);
+ static void unfocus(Client *c, int setfocus);
+ static void unmanage(Client *c, int destroyed);
+ static void unmapnotify(XEvent *e);
++static void updatecurrentdesktop(void);
+ static void updatebarpos(Monitor *m);
+ static void updatebars(void);
+ static void updateclientlist(void);
+@@ -1444,6 +1450,21 @@ setclientstate(Client *c, long state)
+ 		PropModeReplace, (unsigned char *)data, 2);
+ }
+ 
++void
++setcurrentdesktop(void)
++{
++	long data[] = { 0 };
++	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
++}
++
++void
++setdesktopnames(void)
++{
++	XTextProperty text;
++	Xutf8TextListToTextProperty(dpy, tags, TAGSLENGTH, XUTF8StringStyle, &text);
++	XSetTextProperty(dpy, root, &text, netatom[NetDesktopNames]);
++}
++
+ int
+ sendevent(Client *c, Atom proto)
+ {
+@@ -1538,6 +1559,13 @@ setmfact(const Arg *arg)
+ 	arrange(selmon);
+ }
+ 
++void
++setnumdesktops(void)
++{
++	long data[] = { TAGSLENGTH };
++	XChangeProperty(dpy, root, netatom[NetNumberOfDesktops], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
++}
++
+ void
+ setup(void)
+ {
+@@ -1584,6 +1612,10 @@ setup(void)
+ 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+ 	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+ 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
++	netatom[NetDesktopViewport] = XInternAtom(dpy, "_NET_DESKTOP_VIEWPORT", False);
++	netatom[NetNumberOfDesktops] = XInternAtom(dpy, "_NET_NUMBER_OF_DESKTOPS", False);
++	netatom[NetCurrentDesktop] = XInternAtom(dpy, "_NET_CURRENT_DESKTOP", False);
++	netatom[NetDesktopNames] = XInternAtom(dpy, "_NET_DESKTOP_NAMES", False);
+ 	/* init cursors */
+ 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
+ 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
+@@ -1606,6 +1638,10 @@ setup(void)
+ 	/* EWMH support per view */
+ 	XChangeProperty(dpy, root, netatom[NetSupported], XA_ATOM, 32,
+ 		PropModeReplace, (unsigned char *) netatom, NetLast);
++	setnumdesktops();
++	setcurrentdesktop();
++	setdesktopnames();
++	setviewport();
+ 	XDeleteProperty(dpy, root, netatom[NetClientList]);
+ 	/* select events */
+ 	wa.cursor = cursor[CurNormal]->cursor;
+@@ -1618,6 +1654,13 @@ setup(void)
+ 	focus(NULL);
+ }
+ 
++void
++setviewport(void)
++{
++	long data[] = { 0, 0 };
++	XChangeProperty(dpy, root, netatom[NetDesktopViewport], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 2);
++}
++
+ void
+ seturgent(Client *c, int urg)
+ {
+@@ -1765,6 +1808,7 @@ toggleview(const Arg *arg)
+ 		focus(NULL);
+ 		arrange(selmon);
+ 	}
++	updatecurrentdesktop();
+ }
+ 
+ void
+@@ -1869,6 +1913,18 @@ updateclientlist()
+ 				(unsigned char *) &(c->win), 1);
+ }
+ 
++void
++updatecurrentdesktop(void)
++{
++	long rawdata[] = { selmon->tagset[selmon->seltags] };
++	int i=0;
++	while(*rawdata >> i+1){
++		i++;
++	}
++	long data[] = { i };
++	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
++}
++
+ int
+ updategeom(void)
+ {
+@@ -2065,6 +2121,7 @@ view(const Arg *arg)
+ 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+ 	focus(NULL);
+ 	arrange(selmon);
++	updatecurrentdesktop();
+ }
+ 
+ Client *
+diff --git a/dwm.c.orig b/dwm.c.orig
+index f1d86b2..b86f4b7 100644
+--- a/dwm.c.orig
++++ b/dwm.c.orig
+@@ -241,6 +241,8 @@ static int screen;
+ static int sw, sh;           /* X display screen geometry width, height */
+ static int bh;               /* bar height */
+ static int lrpad;            /* sum of left and right padding for text */
++static int vp;               /* vertical padding for bar */
++static int sp;               /* side padding for bar */
+ static int (*xerrorxlib)(Display *, XErrorEvent *);
+ static unsigned int numlockmask = 0;
+ static void (*handler[LASTEvent]) (XEvent *) = {
+@@ -570,7 +572,7 @@ configurenotify(XEvent *e)
+ 				for (c = m->clients; c; c = c->next)
+ 					if (c->isfullscreen)
+ 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
+-				XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
++				XMoveResizeWindow(dpy, m->barwin, m->wx + sp, m->by + vp, m->ww -  2 * sp, bh);
+ 			}
+ 			focus(NULL);
+ 			arrange(NULL);
+@@ -711,7 +713,7 @@ drawbar(Monitor *m)
+ 	if (m == selmon) { /* status is only drawn on selected monitor */
+ 		drw_setscheme(drw, scheme[SchemeNorm]);
+ 		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
+-		drw_text(drw, m->ww - tw, 0, tw, bh, 0, stext, 0);
++		drw_text(drw, m->ww - tw - 2 * sp, 0, tw, bh, 0, stext, 0);
+ 	}
+ 
+ 	for (c = m->clients; c; c = c->next) {
+@@ -737,12 +739,12 @@ drawbar(Monitor *m)
+ 	if ((w = m->ww - tw - x) > bh) {
+ 		if (m->sel) {
+ 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
+-			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
++			drw_text(drw, x, 0, w - 2 * sp, bh, lrpad / 2, m->sel->name, 0);
+ 			if (m->sel->isfloating)
+ 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
+ 		} else {
+ 			drw_setscheme(drw, scheme[SchemeNorm]);
+-			drw_rect(drw, x, 0, w, bh, 1, 1);
++			drw_rect(drw, x, 0, w - 2 * sp, bh, 1, 1);
+ 		}
+ 	}
+ 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
+@@ -1563,7 +1565,10 @@ setup(void)
+ 		die("no fonts could be loaded.");
+ 	lrpad = drw->fonts->h;
+ 	bh = drw->fonts->h + 2;
++	sp = sidepad;
++	vp = (topbar == 1) ? vertpad : - vertpad;
+ 	updategeom();
++
+ 	/* init atoms */
+ 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
+ 	wmatom[WMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
+@@ -1717,7 +1722,7 @@ togglebar(const Arg *arg)
+ {
+ 	selmon->showbar = !selmon->showbar;
+ 	updatebarpos(selmon);
+-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
++	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + sp, selmon->by + vp, selmon->ww - 2 * sp, bh);
+ 	arrange(selmon);
+ }
+ 
+@@ -1828,7 +1833,7 @@ updatebars(void)
+ 	for (m = mons; m; m = m->next) {
+ 		if (m->barwin)
+ 			continue;
+-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, bh, 0, DefaultDepth(dpy, screen),
++		m->barwin = XCreateWindow(dpy, root, m->wx + sp, m->by + vp, m->ww - 2 * sp, bh, 0, DefaultDepth(dpy, screen),
+ 				CopyFromParent, DefaultVisual(dpy, screen),
+ 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
+ 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
+@@ -1843,11 +1848,11 @@ updatebarpos(Monitor *m)
+ 	m->wy = m->my;
+ 	m->wh = m->mh;
+ 	if (m->showbar) {
+-		m->wh -= bh;
+-		m->by = m->topbar ? m->wy : m->wy + m->wh;
+-		m->wy = m->topbar ? m->wy + bh : m->wy;
++		m->wh = m->wh - vertpad - bh;
++		m->by = m->topbar ? m->wy : m->wy + m->wh + vertpad;
++		m->wy = m->topbar ? m->wy + bh + vp : m->wy;
+ 	} else
+-		m->by = -bh;
++		m->by = -bh - vp;
+ }
+ 
+ void
+-- 
+2.46.0
+

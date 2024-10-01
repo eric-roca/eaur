@@ -1,0 +1,40 @@
+# Maintainer: Èric Roca Fernández <eric.roca@gmail.com>
+
+pkgname=scroll
+pkgver=0.1
+pkgrel=1
+pkgdesc="provides a scroll back buffer for a terminal like st"
+arch=('x86_64')
+url="https://tools.suckless.org/scroll"
+license=('MIT')
+depends=()
+makedepends=()
+source=("https://dl.suckless.org/tools/$pkgname-$pkgver.tar.gz"
+    0001-Changes-the-scrollback-keybinding.patch
+    )
+sha256sums=('SKIP'
+    '927def8467debf5edcc448fcef1656eefabf686c97dffb0fdeaffa486afbbce2' # 0001-Changes-the-scrollback-keybinding.patch
+)
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    # Apply patches
+    for patch in "$srcdir"/*.patch; do
+        patch -Np1 -i "$patch"
+    done
+
+    # Remove man pages
+    sed -i 's/ $(DESTDIR)$(MANDIR)\/man1//' Makefile
+    sed -i '/man1/d' Makefile
+    sed -i '/scroll.1/d' Makefile
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}

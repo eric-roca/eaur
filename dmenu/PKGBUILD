@@ -1,0 +1,42 @@
+# Maintainer: Èric Roca Fernández <eric.roca@gmail.com>
+
+pkgname=dmenu
+pkgver=5.3
+pkgrel=3
+pkgdesc="A dynamic menu for X"
+arch=('x86_64')
+url="https://tools.suckless.org/dmenu/"
+license=('MIT')
+depends=('libx11' 'libxinerama' 'libxft' 'freetype2')
+makedepends=('git')
+source=("https://dl.suckless.org/tools/$pkgname-$pkgver.tar.gz"
+        0001-Adds-barpadding-patch.patch
+        0002-Adds-center-patch.patch
+        0003-Cleans-up-ifdefs.patch
+    )
+sha256sums=('SKIP'
+    'd2ceb566f27fa18c3ec06410c88cac05a3a71b996e8a8b7f0c0359af351a9889' # 0001-Adds-barpadding-patch.patch
+    '3c05e4dc52f00bcbcdf2b69f30e542ca988e5068d1d485458d570ff5cec5c746' # 0002-Adds-center-patch.patch
+    '8801cfbd312357fccd1a92d4c10fae1bbc2575f1d830782a9d920b55ebc04ee9' # 0003-Cleans-up-ifdefs.patch
+)
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    # Apply patches
+    for patch in "$srcdir"/*.patch; do
+    patch -Np1 -i "$patch"
+    done
+
+    # Remove man pages
+    sed -i '/man1/d' Makefile
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make X11INC=/usr/include/X11 X11LIB=/usr/lib/X11
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}
