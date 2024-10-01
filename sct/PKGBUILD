@@ -15,10 +15,9 @@ prepare() {
     # Create the Makefile dynamically using a here-document
     cat > Makefile << 'EOF'
 CC=gcc
-CFLAGS=-O2
-PREFIX=/usr
-BINDIR=\$(PREFIX)/bin
-MANDIR=\$(PREFIX)/share/man
+CFLAGS=-O3
+PREFIX=/usr/local/
+MANPREFIX=\$(PREFIX)/share/man
 
 all: sct
 
@@ -29,8 +28,9 @@ sct.o: sct.c
 	\$(CC) \$(CFLAGS) -c sct.c
 
 install: sct
-	install -Dm755 sct \$(DESTDIR)\$(BINDIR)/sct
-	install -Dm644 sct.1 \$(DESTDIR)\$(MANDIR)/man1/sct.1
+    mkdir -p \$(DESTDIR)\$(PREFIX)/bin
+    cp -f stc \$(DESTDIR)\$(PREFIX)/bin
+    chmod 755 \$(DESTDIR)\$(PREFIX)/bin/sct
 
 clean:
 	rm -f sct.o sct
